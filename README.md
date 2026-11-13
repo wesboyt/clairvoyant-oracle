@@ -23,8 +23,6 @@ machine precision:
   of [generalized-maxflow](https://github.com/wesboyt/generalized-maxflow) (vendored as a submodule in
   `third_party/`).
 
-No CME data is used or included. Only Kalshi event-contract data is.
-
 ## Try it
 
 ### **[→ wesboyt.github.io/clairvoyant-oracle](https://wesboyt.github.io/clairvoyant-oracle/)**
