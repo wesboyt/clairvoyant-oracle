@@ -1,92 +1,81 @@
 # clairvoyant-oracle
 
-An exact hindsight oracle for Kalshi event contracts, and a whitepaper on **relative-regret reinforcement
-learning**: gradients that enforce exploration where the exploitation signal alone would close the door.
+An exact hindsight oracle for Kalshi event contracts, and a whitepaper on relative-regret reinforcement learning.
 
-Every Kalshi event market in a recording goes onto **one lattice**. Each time layer has a single **dollar node**
-shared by all markets, plus YES and NO holding nodes per market. Arcs are the recorded books (taker fees included),
-the prints a resting maker order could have filled against, holds, and settlement at the known result. Cash from
-a 15-minute gold contract that settles can fund an oil position one layer later: the dollar nodes bridge the markets.
+All Kalshi event markets in a recording are placed on **one time-expanded lattice**. Each time layer has a single
+**dollar node** shared by every market, plus YES and NO holding nodes per market. Arcs are the recorded order books
+(taker fees included), trades a resting maker order could have filled against, holds, and settlement at the known
+result. Because the dollar node is shared, the payout of one market can fund a position in another a layer later.
 
-For every **decision node** (each dollar node and each position) the oracle gives the exact **relative regret** of
-every available action:
+For every **decision node** (each dollar node and each open position), the oracle computes the exact **relative
+regret** of every available action:
 
 ```math
 \rho(v,a) \;=\; 1 - \frac{Q^*(v,a)}{V^*(v)} \in [0,1]
 ```
 
-That is the share of hindsight's value at $`v`$ that acting $`a`$ now forfeits. It is computed two ways that agree to
-machine precision:
+where $`V^*(v)`$ is the hindsight-optimal value from $`v`$ and $`Q^*(v,a)`$ is the value of taking $`a`$ first and
+playing optimally afterwards. Two solvers are provided, and they agree to machine precision:
 
-- **Marginal** (stake → 0): one backward pass over the DAG, in logs.
-- **Capacitated** (a real stake): generalized maximum flow with the first move forced, through the array interface
-  of [generalized-maxflow](https://github.com/wesboyt/generalized-maxflow) (vendored as a submodule in
-  `third_party/`).
+- **Marginal** (stake → 0): a single backward pass over the lattice, in log space.
+- **Capacitated** (a finite stake): generalized maximum flow with the first move forced, using
+  [generalized-maxflow](https://github.com/wesboyt/generalized-maxflow) (included as a submodule in `third_party/`).
 
-## Try it
+## Demo
 
 ### **[→ wesboyt.github.io/clairvoyant-oracle](https://wesboyt.github.io/clairvoyant-oracle/)**
 
-The oracle running in the page, on three windows cut from the bundled hours:
+The oracle runs entirely in the browser on three windows cut from the bundled data:
 
-- the exact backward pass over 1.3–1.6 million arcs, in JavaScript, checked against the Python oracle at every
-  dollar node;
-- the relative regret of every action at any second you pick;
-- the capacitated oracle, solved by generalized-maxflow compiled to WebAssembly through its new `solveArrays` call,
-  for the stake and horizon you choose.
+- the marginal backward pass over 1.3–1.6 million arcs, verified against the Python implementation at every dollar
+  node;
+- the relative regret of every action at any selected second;
+- the capacitated oracle, solved by generalized-maxflow compiled to WebAssembly, for a chosen stake and trading
+  horizon.
 
-Nothing is uploaded; everything is solved locally. To run it yourself:
+To serve it locally:
 
 ```bash
 git clone --recursive https://github.com/wesboyt/clairvoyant-oracle && cd clairvoyant-oracle
-third_party/generalized-maxflow/bindings/wasm/build.sh      # needs the Emscripten SDK
+third_party/generalized-maxflow/bindings/wasm/build.sh      # requires the Emscripten SDK
 cp third_party/generalized-maxflow/bindings/wasm/pkg/{index.mjs,gmaxflow.js,gmaxflow.wasm} docs/
-python -m http.server -d docs 8000                          # then open localhost:8000
+python -m http.server -d docs 8000                          # open http://localhost:8000
 ```
 
-Every push builds the demo in CI (artifact `demo-site` of the **demo** workflow); running that workflow by hand
-publishes it.
+The **demo** workflow builds the site on every push (artifact `demo-site`) and publishes it when run manually.
 
-## The whitepaper
+## Whitepaper
 
 **[WHITEPAPER.md](WHITEPAPER.md): Relative regret: gradients that enforce exploration when exploitation is the
 signal.**
 
-- **Exploitation is the signal.** The exact on-policy label $`Q^\pi`$ never blows backwards, but it locks
-  *closed doors*. An action whose payoff needs a second closed action is pushed further shut, and the keys behind it
-  starve of learning (P1).
-- **Hindsight alone is biased.** Following the clairvoyant max-flow field converges to the greedy-in-hindsight
-  policy, lured by revealed information (P2).
-- **The gate.** Relative regret detects doors that are closed ($`\pi\le\varepsilon`$) but that hindsight singles out
-  ($`z\ge z_{\min}`$). At those doors only, the label is lifted just above the best sibling's on-policy value. The
-  gradient stays exploitation everywhere except on mass $`\le\varepsilon`$, where it enforces exploration until
-  on-policy play can see behind the door.
-- **Theorem 6** (one player, first order): each tack costs $`O(\varepsilon)`$, sound doors open in bounded time, and
-  the limit bias is at most $`\varepsilon\Delta`$ per false alarm. Exact games measure it: on Sailboat, south and
-  north each stay at $`L=1.0`$ and the tack reaches $`L=0`$. In two-player games the gate cannot cancel rotation;
-  the magnet and the average do that.
-- **On real books.** Over 2026-11-12 14:00–17:00 UTC (39 series, 6,331 markets, 720 decision nodes, ~5,500
-  actions each), hindsight's move is an entry, not *wait*, at 74–85 % of nodes. The shared dollar node is worth more
-  than twice the log-value of any single series alone. A real stake changes the best move: at \$10,000, *wait* wins
-  a node that a \$1 stake would trade.
+On-policy action values reward what the current policy already does, so an action whose payoff depends on another
+rarely taken action is pushed toward zero probability and never revisited. Clairvoyant values avoid this but bias
+the policy toward outcomes it could not have known. The paper uses relative regret from a clairvoyant oracle only
+to *locate* such closed actions, and raises their on-policy label just above the best alternative. The resulting
+gradient explores only on a bounded amount of probability mass. It proves first-order progress guarantees for the
+single-agent case, measures them on exactly solvable games, and applies the oracle to three hours of Kalshi order
+books.
 
-## Use it
+## Usage
 
 ```bash
 pip install -r requirements.txt
-pip install ./third_party/generalized-maxflow          # >= 0.4: the array interface (capacitated oracle, tests)
+pip install ./third_party/generalized-maxflow          # >= 0.4, needed for the capacitated oracle and tests
 
-python -m pytest -q tests                              # DP = generalized max flow on every forced first move
+python -m pytest -q tests
 python -m oracle build  --start 2026-11-12T14:00:00Z --end 2026-11-12T17:00:00Z --step 15 --out tape.npz
 python -m oracle regret --tape tape.npz --report results/regret.json
-python -m oracle build  --start 2026-11-12T14:20:00Z --end 2026-11-12T14:50:00Z --step 5 --series KXINX        KXNASDAQ100 KXGOLD15M KXSILVER15M KXWTI15M KX30YRRATE15M --out cross.npz
+python -m oracle build  --start 2026-11-12T14:20:00Z --end 2026-11-12T14:50:00Z --step 5 \
+       --series KXINX KXNASDAQ100 KXGOLD15M KXSILVER15M KXWTI15M KX30YRRATE15M --out cross.npz
 python -m oracle node   --tape cross.npz --at 2026-11-12T14:29:00Z --stake 100 --horizon 24
-python tools/make_demo.py                              # rebuild docs/data from the bundled hours
-python tacking/experiments/e5_tack.py --quick          # the whitepaper's exact tacking table (T/10)
+python tools/make_demo.py                              # rebuild docs/data from the bundled data
+python tacking/experiments/e5_tack.py --quick          # the whitepaper's tacking experiments at T/10
 ```
 
-`node` prints one decision node's actions with $`\rho`$ over the window, $`\rho`$ for the horizon sub-game (trading
-stops after `--horizon` layers; positions settle), and the capacitated $`Q_E`$ and $`\rho_E`$ for `--stake` dollars.
+`node` prints one decision node's actions with $`\rho`$ over the whole window, $`\rho`$ for the horizon sub-game
+(trading stops after `--horizon` layers; open positions settle), and the capacitated $`Q_E`$ and $`\rho_E`$ for
+`--stake` dollars.
 
 ```python
 from oracle import books, regret
@@ -96,33 +85,35 @@ table, V, L = regret.relative_regret_table(tape)        # every action at every 
 table["rho"], table["kind"], table["layer"], table["cell"]
 ```
 
-## The data
+## Data
 
-`data/kalshi/<series>/2026-11-12/` holds three hours (14:00–17:00 UTC) of every recorded Kalshi event series: 39
-series, 117 hourly files, 146 MB of klob1. That is the full order-book delta stream and every trade, as recorded
-from Kalshi's public market-data websocket. Next to them, `settlements.jsonl` (the results) and
-`markets_2026-11-12.jsonl` (market definitions) are filtered to the markets those hours define.
-`oracle/klob.py` documents and reads the format; `tools/bundle_kalshi.py` shows how the bundle was cut.
+`data/kalshi/<series>/2026-11-12/` contains 2026-11-12 14:00–17:00 UTC for 39 Kalshi event series: 117 hourly
+klob1 files (146 MB) with the full order-book delta stream and all trades from Kalshi's public market-data
+websocket. Each series directory also holds `settlements.jsonl` (results) and `markets_2026-11-12.jsonl` (market
+definitions), filtered to the markets in those hours. `oracle/klob.py` documents and reads the format;
+`tools/bundle_kalshi.py` reproduces the cut.
 
 ## Layout
 
 ```
 oracle/klob.py         klob1 reader
-oracle/books.py        replay every series onto one time grid: the tape (books, prints, settlement)
-oracle/lattice.py      the cross-market lattice: dollar nodes, fees, maker and taker arcs, gmaxflow arrays
-oracle/regret.py       exact relative regret: backward pass (marginal), gmaxflow (capacitated), D23 z-scores
+oracle/books.py        replays every series onto one time grid (books, trades, settlement)
+oracle/lattice.py      the cross-market lattice: dollar nodes, fees, maker and taker arcs, solver arrays
+oracle/regret.py       relative regret: backward pass (marginal), generalized max flow (capacitated), outlier scores
 oracle/__main__.py     command line: build, regret, node, demo
-docs/                  the browser demo (index.html + exported windows in docs/data)
-tacking/               exact tacking experiments behind the whitepaper's section 4 (north/south fields, gate)
-results/               the regret report of the bundled hours
+docs/                  browser demo (index.html and exported windows in docs/data)
+tacking/               exact experiments for the whitepaper's section 4
+results/               regret report for the bundled data
 tests/                 exactness tests
 third_party/           generalized-maxflow (submodule)
 ```
 
-## What the oracle does not model
+## Limitations
 
-Maker arcs are clairvoyant (they ignore queue position); use `--taker-only` for the conservative lattice. Books are
-sampled once per layer. YES/NO netting is omitted. Fees are rounded per contract. Markets whose results are not in
-the bundle have no settlement arc. Details are in WHITEPAPER §5.5.
+Maker arcs assume the order was first in queue; `--taker-only` gives a conservative lattice. Books are sampled once
+per layer. YES/NO netting is not modeled. Fees are rounded per contract. Markets without a result in the bundle have
+no settlement arc. See WHITEPAPER §5.5.
 
-License: MIT.
+## License
+
+MIT

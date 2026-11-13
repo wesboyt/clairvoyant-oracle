@@ -1,4 +1,4 @@
-"""The trading-ladder toy games, re-implemented from their written specifications (the trader project's toy order-
+"""The trading-ladder toy games, re-implemented from their written specifications (toy order-
 landing ladder L0-L2 and the round-trip rung R2 on T2 fill physics). Prices in cents on a $1 binary contract; we buy
 one contract after an upward push of a leading market. Maker fee 0, taker fee ceil(7 P (1 - P)) cents.
 

@@ -1,5 +1,5 @@
 """E5: tacking between the south field (Q^pi rollout labels) and the north field (clairvoyant max-flow relative
-regret swapped in at closed doors, D23a), against each field alone. -> results/tack/<game>_<arm>.json
+regret swapped in at closed doors by the argmax gate), against each field alone. -> results/tack/<game>_<arm>.json
 
 Per step: the Lyapunov quantity L (NashConv; one player: V_opt - V) of the iterate and of the linear average,
 gate flags, door masses, the distance of the iterate to the hull of up to 8 optimal vertices (polar instrument,

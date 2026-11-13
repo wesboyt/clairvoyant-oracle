@@ -109,7 +109,7 @@ def relative_regret_table(tape, j0=0, j1=None, maker=True):
 
 
 def zscores(table):
-    """D23 outlier score of each node's best action: z = (Q(a*) - max_{b != a*} Q(b)) / std_b Q(b), in rho units
+    """Outlier score of each node's best action: z = (Q(a*) - max_{b != a*} Q(b)) / std_b Q(b), in rho units
     (Q expressed as 1 - rho, so the clairvoyant offset cancels). -> per layer arrays (layer, best kind, z, n)."""
     out = []
     lay = table['layer']

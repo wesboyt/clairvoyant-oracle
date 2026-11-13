@@ -40,7 +40,7 @@ to machine precision.
 
 A single agent acts on an exogenous path (a deal $`d`$: hidden cards, the future order books). A decision key $`k`$ is
 what the agent has observed plus its own in-flight state. $`A(k)`$ is the legal action set, and a behavioural policy
-$`\pi(a\mid k)`$ chooses among them. Because our actions do not move the path, $`P(d\mid k)`$ depends only on what was
+$`\pi(a\mid k)`$ chooses among them. Because the agent's actions do not move the path, $`P(d\mid k)`$ depends only on what was
 observed, never on the policy (Lemma 0 of `tacking/`). The strategy space is a flow polytope: realisation plans
 $`x\ge 0`$ with $`\sum_a x(k,a) = \sum_{\sigma\in\text{parents}(k)} x(\sigma)`$. A policy *is* the centroid of the
 cloud of pure strategy trees it draws (Prop. 1.1).
@@ -95,8 +95,8 @@ information about $`d`$ for the rest of the episode.
 
 **P2 (PROVED).** Following north alone converges to greedy(mf). That policy is off the optimal set wherever a later
 choice exploits revealed information, i.e. wherever $`\arg\max\text{mf}\notin\arg\max Q^{\pi^*}`$. Clairvoyant labels
-make waiting nearly free and gambles look safe. Every market RL run trained on clairvoyant $`Q^*`$ labels collapsed to
-"wait".
+make waiting nearly free and gambles look safe; in market settings, training on clairvoyant $`Q^*`$ labels tends to
+collapse the policy to "wait".
 
 So neither field alone is enough: one locks doors, the other lures the policy into gambles.
 
@@ -120,9 +120,8 @@ label, carries the clairvoyance premium. Relative regret has three properties a 
    $`e^{20}`$–$`e^{100}`$ dollars of hindsight value within minutes (§5.4). Additive regrets at different nodes are
    then incomparable, while $`\rho`$ always lies in $`[0,1]`$.
 3. **It is a door detector, not a label.** $`\rho`$ is used only to decide *where* the on-policy label is wrong
-   (§3). The labels themselves stay on the $`Q^\pi`$ scale. This answers the scale mismatch between a clairvoyant
-   ruler and an on-policy rollout. In poker, solver EV and exact Q were comparable within a few percent. A market
-   max flow and an enumerated on-policy rollout are not.
+   (§3). The labels themselves stay on the $`Q^\pi`$ scale, which matters because a market max flow and an
+   on-policy rollout value can differ by orders of magnitude.
 
 ### 2.2 The outlier score
 
@@ -146,8 +145,8 @@ that is a north outlier, $`z(k,a)\ge z_{\min}`$. There only that action's label 
 q(k,a) \;\leftarrow\; \max_b \hat Q^\pi(k,b) + v\cdot s_Q ,
 ```
 with $`s_Q`$ the spread of the on-policy labels over the siblings and $`v`$ small (0.25). Every sibling keeps its
-$`\hat Q^\pi`$. D23a fires only on north's argmax. **D23b** fires on every closed north outlier, a refinement found
-by the exact experiments (§4.3).
+$`\hat Q^\pi`$. The **argmax gate** fires only on north's argmax. The **all-outliers gate** fires on every closed north
+outlier, a refinement motivated by the exact experiments (§4.3).
 
 ### 3.2 Why this is the right gradient
 
@@ -169,7 +168,7 @@ gate is opening, and:
 
 - **(N1) North is sound on true doors.** At every key on an optimal path, a closed optimal action is a north
   outlier.
-- **(N2) The firing rule reaches it.** D23a needs the optimal door to be north's argmax; D23b needs only N1.
+- **(N2) The firing rule reaches it.** The argmax gate needs the optimal door to be north's argmax; the all-outliers gate needs only N1.
 - **(N3) False alarms are bounded.** A non-optimal outlier costs at most $`\Delta_k = V^*(k) - Q^*(k,a)`$.
 
 Then:
@@ -205,7 +204,7 @@ Everything here is exact (full enumeration, LP/DP solvers, expected updates); `t
 $`L`$ = NashConv (one player: $`V_{\text{opt}} - V`$) of the final iterate, with the linear average's in brackets.
 "fl" counts the updates in which the gate fired.
 
-| game (T) | south (the wind) | north alone | tack D23a | tack D23b | vswap (old) |
+| game (T) | south (the wind) | north alone | tack (argmax gate) | tack (all outliers) | vswap (old) |
 |---|---|---|---|---|---|
 | DoorTrap (3000) | **1.00** (locked) | 0 | **0** (fl 164) | 0 | 0 |
 | Sailboat (3000) | **1.00** (locked) | **1.00** (lured by the gamble) | **0** (fl 49) | 0 | 0.049 (holds the false door at ε) |
@@ -237,10 +236,10 @@ In matching pennies, Kuhn and Leduc the iterate's NashConv stays near plain play
 average converges in every arm. Tacking still helps a little (Kuhn 0.425 → 0.392; Leduc 2.39 → 2.30), but it is not
 what converges.
 
-### 4.3 WrongDoor and D23b
+### 4.3 WrongDoor and the all-outliers gate
 
-When north's argmax among the closed doors is itself a false door (N2 fails), D23a holds the wrong door at
-$`\varepsilon`$ forever and never fires on the true one. **Firing on every closed outlier (D23b) fixes it:
+When north's argmax among the closed doors is itself a false door (N2 fails), the argmax gate holds the wrong door at
+$`\varepsilon`$ forever and never fires on the true one. **Firing on every closed outlier fixes it:
 $`L = 0`$.**
 
 ---
@@ -295,8 +294,8 @@ backward pass reproduces the Python oracle's value at every dollar node to $`< 1
 
 ### 5.3 Speed: arrays straight from memory
 
-A regret label needs one solve per action. The oracle therefore calls generalized-maxflow through the array
-interface added for this work: `gmf_solve_arrays_flows` in its C ABI, `max_flow_arrays` in Python (numpy buffers read
+A regret label needs one solve per action. The oracle therefore calls generalized-maxflow through its array
+interface: `gmf_solve_arrays_flows` in its C ABI, `max_flow_arrays` in Python (numpy buffers read
 in place), and `solveArrays` in WebAssembly (typed arrays copied straight into the heap). That skips the JSON round
 trip, which is 5–32× faster on lattices of 50–3,000 edges.
 

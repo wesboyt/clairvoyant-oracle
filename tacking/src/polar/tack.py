@@ -1,17 +1,17 @@
 """Tacking dynamics: on-policy Q^pi labels (south) with the clairvoyant max-flow relative regret (north) swapped in
-at closed doors by the trader's gate rule (PLAN D23a), and the two pure arms. theory.md S4.
+at closed doors by the argmax gate rule, and the two pure arms. theory.md S4.
 
 Labels per player i and key k (exact expectations; one 'update' = the expected step over on-policy pivots):
-    south   q = Q^{pi~}(k, .): the pruned rollout value (D17: at non-pivot nodes keep a iff pi(a) >= p_prune max pi,
+    south   q = Q^{pi~}(k, .): the pruned rollout value (at non-pivot nodes keep a iff pi(a) >= p_prune max pi,
             renormalise; the pivot key expands every action)
     north   q = mf(k, .): the clairvoyant max-flow field (oracle.clairvoyant_field) at every key; two players: the
             clairvoyant best response against the CURRENT opponent (poker's node-locked BR, made clairvoyant)
-    tackall the refinement D23b: as tack, but every closed north outlier is raised (not only mf's argmax)
-    tack    south, except at flagged keys (D23a): a* = argmax mf, pi(a*) <= eps (5%), r = mf(a*) - sum_b pi(b) mf(b),
+    tackall the all-outliers refinement: as tack, but every closed north outlier is raised (not only mf's argmax)
+    tack    south, except at flagged keys (argmax gate): a* = argmax mf, pi(a*) <= eps (5%), r = mf(a*) - sum_b pi(b) mf(b),
             z = r / s_mf >= z_min (1.0) -> q(a*) = max_b q(b) + v_eps * s_q (v_eps = 0.25); siblings keep q
-    vswap   the pre-D23 rule: at keys with a closed door a* (pi <= eps) that is mf's argmax (within delta),
+    vswap   the earlier swap rule: at keys with a closed door a* (pi <= eps) that is mf's argmax (within delta),
             q <- mf - mean mf + mean q (every sibling)
-Update (the repo's surrogate at ratio 1 = NeuRD, ALGORITHM_SPEC S5 / leduc ALGORITHM S5.1), plain SGD:
+Update (a PPO-style surrogate at ratio 1 = NeuRD), plain SGD:
     theta(k, a) += lr * w(k) * (q(k, a) - mean_a q(k, .)) / sigma,   w(k) = occ(k) / max occ  (on-policy pivots)
 with sigma an EMA of the occupancy-weighted RMS advantage (sigma_ref frozen at step 0). Optional entropy anchor.
 """
@@ -117,7 +117,7 @@ def gate_d23a(pl, q, mf, pi, eps=0.05, z_min=1.0, v_eps=0.25):
 
 
 def gate_all(pl, q, mf, pi, eps=0.05, z_min=1.0, v_eps=0.25):
-    """Refinement 'D23b': fire on EVERY closed door a (pi(a) <= eps) that is a north outlier,
+    """All-outliers refinement: fire on EVERY closed door a (pi(a) <= eps) that is a north outlier,
     z_a = (mf(a) - sum_b pi(b) mf(b)) / s_mf >= z_min, not only on mf's argmax."""
     q0 = q
     q = q.copy()

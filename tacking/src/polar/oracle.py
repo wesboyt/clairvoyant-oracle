@@ -4,12 +4,11 @@
     the board, the whole future tape; NOT the opponent's unobserved moves) and let i best-respond deal by deal to the
     opponent's pi*: Q*_{k,d}(a) = the value of a at key k when i plays on knowing d. Then average over the key's
     posterior: mf(k, a) = sum_d w(k, d) Q*_{k,d}(a) / sum_d w(k, d),  w(k, d) = p(d) x (the opponent's reach of
-    (k, d) under pi*). One player: w = p(d), Q*_{k,d} = the per-tape max over the realised lattice. This is the trader's gate oracle (an average of per-future maxima;
-    lob/posterior/gate.py:49-71) with K_mf = all candidates.
+    (k, d) under pi*). One player: w = p(d), Q*_{k,d} = the per-tape max over the realised lattice. This is the gate oracle (an average of per-future maxima)
+    with K_mf = all candidates.
 (b) exact information-respecting optimum ('south'): Q^{pi*}(k, a), the counterfactual value of a at k when both
     players then follow an exact optimal / Nash pi* (DP for one player, LP Nash for two).
-(c) posterior variant of (a): K_mf candidate histories drawn from the key's posterior, the realised one excluded
-    (lob/posterior/gate.py posterior_maxflow; scripts/edge_lib.py:409 with uniform weights).
+(c) posterior variant of (a): K_mf candidate histories drawn from the key's posterior, the realised one excluded (uniform weights).
 """
 import numpy as np
 
@@ -99,7 +98,7 @@ def clairvoyant_field(game, pis, i=0, keep_members=False):
 
 def posterior_field(game, i, members, K=8, rng=None, exclude=False):
     """Sampled clairvoyant field: per key, K candidate histories drawn iid from the key's posterior w (what the toy
-    trainer does: lob/toy/core.py ToyWorld.candidates). exclude=True: first draw a 'realised' member h0 ~ w and
+    trainer does). exclude=True: first draw a 'realised' member h0 ~ w and
     draw the K candidates among the OTHER members (the twin / real-tape rule 'labelled tape excluded'; harmless
     over a continuum of futures, a bias over a finite posterior)."""
     rng = rng or np.random.default_rng(0)

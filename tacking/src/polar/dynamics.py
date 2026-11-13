@@ -7,7 +7,7 @@ exact counterfactual values W (unnormalised) or Q = W / R (normalised) of the cu
     eg       extragradient Hedge: half step, then the step with the half-step values
     mmd      magnetic mirror descent (Sokota et al. 2023), behavioural closed form with normalised Q, magnet
              uniform (fixed: converges to a QRE) or refreshed every K steps (proximal point / R-NaD style)
-    recipe   a tabular analogue of the trader repo's RL update: centred advantage / sigma, anchors (eta_reg to the
+    recipe   a tabular centred-advantage policy update: centred advantage / sigma, anchors (eta_reg to the
              magnet, eta_unif to uniform, entropy, forward KL to the magnet), Adam beta1 = 0, magnet refine every
              K updates, a Linear-CFR average reset on refine
     cfr+     regret matching+, alternating updates, linear averaging
@@ -165,7 +165,7 @@ class Learner:
         self.pis = [x.copy() for x in self.xe]
 
     def _recipe_step(self):
-        """Tabular analogue of the trader's update (docs/ALGORITHM_SPEC.md S5)."""
+        """Tabular centred-advantage update with anchors."""
         g, kw = self.g, self.kw
         pls = g.plex
         lr = kw.get('lr', 0.05)

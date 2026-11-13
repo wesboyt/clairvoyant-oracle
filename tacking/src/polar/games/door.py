@@ -126,7 +126,7 @@ class Sailboat:
 class WrongDoor:
     """North ranks the closed doors wrongly. root: 'safe' 1.0, 'door' (closed) -> 'good' 2.0 (closed) / 'bad' 0;
     'false' (closed) -> a hidden-coin bet paying 2.2 / -0.6 (true EV 0.8, clairvoyant 2.2). The north argmax at the
-    root is the false door, so the D23a rule (fire on the argmax only) never opens the true door."""
+    root is the false door, so the argmax gate (fire on the argmax only) never opens the true door."""
     name = 'WrongDoor'
     players = 1
     merge = True
