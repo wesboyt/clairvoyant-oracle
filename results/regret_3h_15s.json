@@ -1,0 +1,176 @@
+{
+ "maker": {
+  "tape": "720 layers x 15 s, 6331 markets in 39 series, 3273625 cells (4542 alive per layer on average)",
+  "maker_arcs": true,
+  "log_value_usd0": 315.4343316937138,
+  "decision_nodes": 720,
+  "actions": 4002716,
+  "actions_per_node": 5559.327777777778,
+  "per_kind": {
+   "wait": {
+    "actions": 720,
+    "optimal": 112,
+    "median_rho": 0.2528177527264267
+   },
+   "take_yes": {
+    "actions": 1962891,
+    "optimal": 30,
+    "median_rho": 1.0
+   },
+   "take_no": {
+    "actions": 2020414,
+    "optimal": 15,
+    "median_rho": 1.0
+   },
+   "make_yes": {
+    "actions": 8205,
+    "optimal": 260,
+    "median_rho": 0.47947364778495905
+   },
+   "make_no": {
+    "actions": 10486,
+    "optimal": 336,
+    "median_rho": 0.5068968761836546
+   }
+  },
+  "best_is_entry_share": 0.8456189151599444,
+  "best_is_outlier_share": 0.38803894297635605,
+  "best_is_entry_and_outlier_share": 0.3337969401947149,
+  "rho_quantiles": {
+   "0.01": 0.29310347430542444,
+   "0.1": 0.5368672094350051,
+   "0.5": 1.0,
+   "0.9": 1.0,
+   "0.99": 1.0
+  },
+  "log_value_usd0_by_series_alone": {
+   "KX10YRRATE15M": 62.06025163401693,
+   "KX10YRRATEH": 8.941216360242791,
+   "KX2YRRATE15M": 58.610422238781545,
+   "KX2YRRATEH": 8.396371787591386,
+   "KX30YRRATE15M": 62.49823962262342,
+   "KX30YRRATEH": 9.87774439334044,
+   "KX5YRRATE15M": 53.389525669453924,
+   "KX5YRRATEH": 12.891923848709032,
+   "KX7YRRATEH": 7.908039889037698,
+   "KXBRENT15M": 95.00954302945328,
+   "KXBRENTD": 6.077491703206598,
+   "KXBRENTMON": 0.2803826477074096,
+   "KXBRENTW": 1.3873932846303865,
+   "KXCOPPER15M": 127.40631011492567,
+   "KXCOPPERD": 7.830524225137914,
+   "KXCOPPERMON": 0.057158485966578465,
+   "KXCOPPERW": 1.986596219371252,
+   "KXGOLD15M": 155.95361258755514,
+   "KXGOLDD": 12.750749586565327,
+   "KXGOLDH": 75.14345004088482,
+   "KXGOLDMON": 1.6188715397795101,
+   "KXGOLDW": 2.479485061565577,
+   "KXINX": 7.709922091649136,
+   "KXINXU": 88.86668152709774,
+   "KXNASDAQ100": 4.003533842469135,
+   "KXNASDAQ100U": 61.2402103115594,
+   "KXNATGAS15M": 143.83905603319315,
+   "KXNATGASD": 8.610427881410564,
+   "KXNATGASMON": 0.4440090673007704,
+   "KXNATGASW": 0.7120847932895543,
+   "KXSILVER15M": 146.8125565268603,
+   "KXSILVERD": 7.413799367435781,
+   "KXSILVERH": 38.764117197958385,
+   "KXSILVERMON": 1.0608719415812105,
+   "KXSILVERW": 1.2414800265517743,
+   "KXWTI": 11.74891809652067,
+   "KXWTI15M": 151.03409081667257,
+   "KXWTIH": 37.27809553270025,
+   "KXWTIW": 0.2411620664929668
+  },
+  "bridge_gain_log": 159.48071910615863
+ },
+ "taker_only": {
+  "tape": "720 layers x 15 s, 6331 markets in 39 series, 3273625 cells (4542 alive per layer on average)",
+  "maker_arcs": false,
+  "log_value_usd0": 106.19722797997116,
+  "decision_nodes": 720,
+  "actions": 3984025,
+  "actions_per_node": 5533.368055555556,
+  "per_kind": {
+   "wait": {
+    "actions": 720,
+    "optimal": 190,
+    "median_rho": 0.07514562149258319
+   },
+   "take_yes": {
+    "actions": 1962891,
+    "optimal": 281,
+    "median_rho": 1.0
+   },
+   "take_no": {
+    "actions": 2020414,
+    "optimal": 285,
+    "median_rho": 1.0
+   },
+   "make_yes": {
+    "actions": 0,
+    "optimal": 0,
+    "median_rho": null
+   },
+   "make_no": {
+    "actions": 0,
+    "optimal": 0,
+    "median_rho": null
+   }
+  },
+  "best_is_entry_share": 0.7371349095966621,
+  "best_is_outlier_share": 0.09735744089012517,
+  "best_is_entry_and_outlier_share": 0.08344923504867872,
+  "rho_quantiles": {
+   "0.01": 0.08721359069372259,
+   "0.1": 0.275294122264647,
+   "0.5": 1.0,
+   "0.9": 1.0,
+   "0.99": 1.0
+  },
+  "log_value_usd0_by_series_alone": {
+   "KX10YRRATE15M": 19.0221654790256,
+   "KX10YRRATEH": 7.32097668357571,
+   "KX2YRRATE15M": 24.61468309521664,
+   "KX2YRRATEH": 5.763248148435032,
+   "KX30YRRATE15M": 23.762069944396643,
+   "KX30YRRATEH": 8.000635442295984,
+   "KX5YRRATE15M": 22.508611008513164,
+   "KX5YRRATEH": 7.867506401219517,
+   "KX7YRRATEH": 6.115226120168357,
+   "KXBRENT15M": 21.034232342581547,
+   "KXBRENTD": 4.775732759238243,
+   "KXBRENTMON": 0.0,
+   "KXBRENTW": 1.0383318374370312,
+   "KXCOPPER15M": 25.68525392174784,
+   "KXCOPPERD": 7.493499180509916,
+   "KXCOPPERMON": 8.808568263685146e-08,
+   "KXCOPPERW": 1.986596219371252,
+   "KXGOLD15M": 34.92173864880808,
+   "KXGOLDD": 6.818609602290725,
+   "KXGOLDH": 29.991284466339483,
+   "KXGOLDMON": 0.16330365218813792,
+   "KXGOLDW": 1.3244509952757757,
+   "KXINX": 5.253665238847043,
+   "KXINXU": 38.45573561583768,
+   "KXNASDAQ100": 3.6537881427515515,
+   "KXNASDAQ100U": 37.101621152075495,
+   "KXNATGAS15M": 28.26795596234839,
+   "KXNATGASD": 4.20575221780076,
+   "KXNATGASMON": 0.0,
+   "KXNATGASW": 0.30784778056237627,
+   "KXSILVER15M": 31.88021099742265,
+   "KXSILVERD": 5.549061403569757,
+   "KXSILVERH": 25.341747067329212,
+   "KXSILVERMON": 0.03774033239800578,
+   "KXSILVERW": 0.913744561181085,
+   "KXWTI": 8.613948290858692,
+   "KXWTI15M": 23.76509950254637,
+   "KXWTIH": 19.754773436555418,
+   "KXWTIW": 0.06062457053891013
+  },
+  "bridge_gain_log": 67.74149236413348
+ }
+}

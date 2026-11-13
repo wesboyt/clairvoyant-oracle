@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clairvoyant oracle: exact relative regret on Kalshi</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f8fafc; --line: #e2e8f0; --ink: #0f172a;
+    --muted: #64748b; --accent: #0f766e; --hot: #dc2626; --warm: #ea580c;
+    --code-bg: #f1f5f9; --ok: #15803d; --s2: #6366f1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1220; --panel: #111a2b; --line: #1e2b43; --ink: #e8eefc;
+      --muted: #94a3b8; --accent: #2dd4bf; --hot: #f87171; --warm: #fb923c;
+      --code-bg: #0e1726; --ok: #4ade80; --s2: #a5b4fc;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 1150px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0 0 22px; max-width: 80ch; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; font-weight: 650; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  select, input[type=number] { background: var(--code-bg); color: var(--ink); border: 1px solid var(--line);
+         border-radius: 8px; padding: 7px 9px; font-size: 14px; }
+  input[type=range] { flex: 1; min-width: 220px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px;
+           font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .stat { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line);
+          font-variant-numeric: tabular-nums; }
+  .stat:last-child { border-bottom: 0; }
+  .k { color: var(--muted); }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 650; }
+  .pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .pill.bad { background: color-mix(in srgb, var(--hot) 18%, transparent); color: var(--hot); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 7px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .bar { height: 8px; border-radius: 4px; background: var(--accent); min-width: 1px; }
+  .scroll { max-height: 460px; overflow: auto; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .foot { margin-top: 18px; color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+  svg text { fill: var(--muted); font-size: 11px; }
+  .err { color: var(--hot); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Clairvoyant oracle: exact relative regret across Kalshi markets</h1>
+  <p class="lede">
+    Every Kalshi event market recorded in the window, all of them on one lattice. Each second gets one
+    <b>dollar node</b> shared by every market, plus YES and NO holding nodes per market. Arcs are the recorded books
+    (taker fees included), the prints a resting maker order could have filled against, holds, and settlement at the
+    known result. The value of a node is what perfect hindsight earns from it. The <b>relative regret</b>
+    &rho; = 1 &minus; Q(a)/V of an action is the share of that value it forfeits. Everything runs here in the page:
+    the exact backward pass in JavaScript, and the capacitated version through
+    <a href="https://github.com/wesboyt/generalized-maxflow">generalized-maxflow</a> compiled to WebAssembly, using
+    its new array interface.
+  </p>
+
+  <div class="card">
+    <h2>Window</h2>
+    <div class="row">
+      <select id="win"></select>
+      <label><input type="checkbox" id="maker" checked> clairvoyant maker arcs</label>
+      <span id="loadinfo" class="k"></span>
+    </div>
+    <svg id="chart" width="100%" height="170" viewBox="0 0 1000 170" preserveAspectRatio="none"></svg>
+    <div class="row">
+      <span class="k">decision node USD<sub>j</sub></span>
+      <input type="range" id="layer" min="0" max="0" value="0">
+      <span id="layerinfo" style="font-variant-numeric: tabular-nums"></span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Marginal oracle (stake &rarr; 0): exact, every action</h2>
+      <div id="dpinfo"></div>
+      <div class="scroll"><table id="tbl"><thead><tr><th>action</th><th>market</th><th>result</th>
+        <th class="num">log Q</th><th class="num">&rho;</th><th></th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Capacitated oracle: gmaxflow in WebAssembly</h2>
+      <p class="k" style="margin-top:0">The sub-game in which trading stops <i>horizon</i> layers after the decision
+        (open positions still settle, dollars wait), solved exactly with the stake entering at USD<sub>j</sub> and
+        each first move forced. The stake &rarr; 0 column is the same sub-game's exact backward pass.</p>
+      <div class="row">
+        <span class="k">stake $</span><input type="number" id="stake" value="10" min="0.000001" step="any" style="width:110px">
+        <span class="k">horizon (layers)</span><input type="number" id="hor" value="20" min="1" max="120" style="width:70px">
+        <span class="k">top</span><input type="number" id="topn" value="8" min="1" max="40" style="width:70px">
+        <button id="solve" disabled>Solve</button>
+      </div>
+      <div id="cap"></div>
+      <div class="scroll"><table id="ctbl"><thead><tr><th>action</th><th>market</th>
+        <th class="num">&rho; (stake&rarr;0)</th><th class="num">Q<sub>E</sub> per $</th><th class="num">&rho;<sub>E</sub></th></tr></thead><tbody></tbody></table></div>
+      <div id="err" class="err"></div>
+    </div>
+  </div>
+
+  <p class="foot">
+    Source, the whitepaper and the data: <a href="https://github.com/wesboyt/clairvoyant-oracle">github.com/wesboyt/clairvoyant-oracle</a>.
+    Windows are exported by <code>python -m oracle demo</code> from the bundled recordings; the page checks its own
+    backward pass against the Python oracle's values for every dollar node of the window.
+  </p>
+</div>
+
+<script type="module">
+const KINDS = ["wait","take_yes","take_no","make_yes","make_no","hold","sell_yes","sell_no",
+               "make_sell_yes","make_sell_no","settle","sink","source"];
+const MAKER = new Set([3, 4, 8, 9]);
+const ENTRY = new Set([0, 1, 2, 3, 4]);
+const KEEP_AFTER = new Set([0, 5, 10, 11]);      // wait, hold, settle, sink: what remains after the horizon
+const WINDOWS = await (await fetch("data/windows.json")).json();
+const $ = (id) => document.getElementById(id);
+let W = null, solver = null, V = null;
+
+for (const [i, w] of WINDOWS.entries()) {
+  const o = document.createElement("option"); o.value = i; o.textContent = w.label; $("win").appendChild(o);
+}
+
+async function load(i) {
+  const name = WINDOWS[i].file;
+  const meta = await (await fetch(`data/${name}.json`)).json();
+  const res = await fetch(`data/${name}.bin.gz`);
+  const buf = await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+  const m = meta.arcs, n = meta.nodes;
+  let off = 0;
+  const take = (Ctor, len) => { const a = new Ctor(buf.slice(off, off + len * Ctor.BYTES_PER_ELEMENT)); off += len * Ctor.BYTES_PER_ELEMENT; return a; };
+  W = { meta, m, n,
+        frm: take(Int32Array, m), to: take(Int32Array, m), mkt: take(Int32Array, m), lay: take(Int32Array, m),
+        cap: take(Float64Array, m), gain: take(Float64Array, m), key: take(Float64Array, n), kind: take(Int8Array, m) };
+  // the export orders arcs by descending key of their tail, the order the backward pass needs
+  for (let i = 1; i < m; i++) if (W.key[W.frm[i]] > W.key[W.frm[i - 1]]) throw new Error("arcs are not in backward order");
+  W.lg = W.gain.map(Math.log);
+  $("layer").max = meta.layers - 1; $("layer").value = 0;
+  $("loadinfo").textContent = `${meta.layers} layers x ${meta.step_s}s from ${meta.t0.replace("+00:00","Z")}, ` +
+    `${Object.keys(meta.markets).length} markets, ${m.toLocaleString()} arcs, ${n.toLocaleString()} nodes`;
+  recompute();
+}
+
+function backward(useMaker, j = -1, H = Infinity) {
+  // j, H: the horizon sub-game (no trading at layers >= j + H; holds, waits, settlement and the sink remain)
+  // V(v) = max over arcs v->w of log gain + V(w); arcs sorted by the tail's topological key, descending
+  const val = new Float64Array(W.n).fill(-Infinity);
+  val[W.meta.sink] = 0;
+  for (let p = 0; p < W.m; ) {
+    const k = W.key[W.frm[p]];
+    let q = p;
+    while (q < W.m && W.key[W.frm[q]] === k) q++;
+    for (let i = p; i < q; i++) {
+      if (!useMaker && MAKER.has(W.kind[i])) continue;
+      if (k >= j + H && !KEEP_AFTER.has(W.kind[i])) continue;
+      const v = W.lg[i] + val[W.to[i]];
+      if (v > val[W.frm[i]]) val[W.frm[i]] = v;
+    }
+    p = q;
+  }
+  return val;
+}
+
+function recompute() {
+  const useMaker = $("maker").checked;
+  V = backward(useMaker);
+  const ref = useMaker ? W.meta.check.log_value_usd : W.meta.check.log_value_usd_taker_only;
+  let worst = 0;
+  W.meta.usd_nodes.forEach((u, j) => { const a = V[u], b = ref[j];
+    const d = (isFinite(a) && isFinite(b)) ? Math.abs(a - b) / Math.max(1, Math.abs(b)) : (a === b ? 0 : Infinity);
+    worst = Math.max(worst, d); });
+  $("dpinfo").innerHTML = `<div class="stat"><span class="k">backward pass vs the Python oracle (all ${ref.length} dollar nodes)</span>` +
+    `<span class="pill ${worst < 1e-9 ? "ok" : "bad"}">${worst < 1e-9 ? "match" : "differs"} (max rel. diff ${worst.toExponential(1)})</span></div>`;
+  chart(); table();
+}
+
+function chart() {
+  const usd = W.meta.usd_nodes, ys = usd.map((u) => V[u]);
+  const lo = Math.min(...ys), hi = Math.max(...ys), span = Math.max(hi - lo, 1e-12);
+  const pts = ys.map((y, j) => `${(j / (ys.length - 1)) * 1000},${150 - ((y - lo) / span) * 135}`).join(" ");
+  const j = +$("layer").value, x = (j / (ys.length - 1)) * 1000;
+  $("chart").innerHTML = `<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${pts}"/>` +
+    `<line x1="${x}" x2="${x}" y1="0" y2="150" stroke="var(--warm)" stroke-width="1.5"/>` +
+    `<text x="4" y="12">log V(USD_j): ${hi.toFixed(3)}</text><text x="4" y="165">${lo.toFixed(3)}  (value of $1 at each second, perfect hindsight)</text>`;
+}
+
+function actionsAt(j) {
+  const u = W.meta.usd_nodes[j], useMaker = $("maker").checked, best = new Map();
+  for (let i = 0; i < W.m; i++) {
+    if (W.frm[i] !== u || !ENTRY.has(W.kind[i])) continue;
+    if (!useMaker && MAKER.has(W.kind[i])) continue;
+    const key = W.kind[i] + ":" + W.mkt[i];
+    const q = W.lg[i] + V[W.to[i]];
+    if (!best.has(key) || q > best.get(key).q) best.set(key, { i, q, kind: W.kind[i], mkt: W.mkt[i] });
+  }
+  const v = V[u];
+  return [...best.values()].map((a) => ({ ...a, rho: Math.max(0, 1 - Math.exp(a.q - v)) })).sort((a, b) => a.rho - b.rho);
+}
+
+function label(a) {
+  const mk = W.meta.markets[a.mkt];
+  return { ticker: mk ? mk.ticker : "", result: mk ? (mk.result === null ? "?" : (mk.result ? "YES" : "NO")) : "" };
+}
+
+function table() {
+  const j = +$("layer").value, u = W.meta.usd_nodes[j];
+  const t = new Date(Date.parse(W.meta.t0) + j * W.meta.step_s * 1000).toISOString().slice(11, 19);
+  $("layerinfo").textContent = `j = ${j}  (${t} UTC)  log V = ${V[u].toFixed(6)}`;
+  const acts = actionsAt(j);
+  const rows = acts.slice(0, 60).map((a) => { const l = label(a);
+    return `<tr><td>${KINDS[a.kind]}</td><td>${l.ticker}</td><td>${l.result}</td><td class="num">${a.q.toFixed(5)}</td>` +
+      `<td class="num">${a.rho.toFixed(6)}</td><td style="width:90px"><div class="bar" style="width:${(1 - a.rho) * 90}px"></div></td></tr>`; });
+  $("tbl").querySelector("tbody").innerHTML = rows.join("") +
+    (acts.length > 60 ? `<tr><td colspan="6" class="k">${acts.length - 60} more actions</td></tr>` : "");
+  $("ctbl").querySelector("tbody").innerHTML = ""; $("cap").innerHTML = "";
+}
+
+function solveCapacitated() {
+  $("err").textContent = "";
+  try {
+    const j = +$("layer").value, stake = +$("stake").value, topn = +$("topn").value, useMaker = $("maker").checked;
+    const H = Math.max(1, +$("hor").value), KEEP = new Set([0, 5, 10, 11]);   // wait, hold, settle, sink
+    const src = W.meta.usd_nodes[j], F = W.n, S = W.meta.source, T = W.meta.sink;
+    const keep = [];
+    for (let i = 0; i < W.m; i++) {
+      if (W.key[W.frm[i]] < j) continue;                       // arcs before the decision are unreachable
+      if (W.key[W.frm[i]] >= j + H && !KEEP.has(W.kind[i])) continue;   // no trading after the horizon
+      if (!useMaker && MAKER.has(W.kind[i])) continue;
+      keep.push(i);
+    }
+    const run = (first, st) => {         // first: [from, to, cap, gain] arcs from the source side; st: stake
+      const m = keep.length + first.length;
+      const f = new Int32Array(m), t = new Int32Array(m), c = new Float64Array(m), g = new Float64Array(m);
+      keep.forEach((i, k) => { f[k] = W.frm[i]; t[k] = W.to[i]; c[k] = W.cap[i]; g[k] = W.gain[i]; });
+      first.forEach(([a, b, cc, gg], k) => { const p = keep.length + k; f[p] = a; t[p] = b; c[p] = cc; g[p] = gg; });
+      const r = solver.solveArrays(W.n + 1, S, T, f, t, c, g);
+      if (r.status === 2) throw new Error("gmaxflow rejected the graph");
+      return r.maxFlow / st;
+    };
+    const t0 = performance.now();
+    const vE = run([[S, src, stake, 1]], stake);
+    const acts = actionsAt(j).slice(0, topn);
+    const nextUsd = W.meta.usd_nodes[j + 1];
+    const forced = (a, st) => {
+      if (a.kind === 0) return run([[S, nextUsd, st, 1]], st);
+      const arcs = [[S, F, st, 1]];
+      for (let i = 0; i < W.m; i++)
+        if (W.frm[i] === src && W.kind[i] === a.kind && W.mkt[i] === a.mkt) arcs.push([F, W.to[i], W.cap[i], W.gain[i]]);
+      return run(arcs, st);
+    };
+    const qs = acts.map((a) => forced(a, stake));
+    const Vh = backward(useMaker, j, H);                  // the same sub-game at a vanishing stake, exactly
+    const q0 = acts.map((a) => {
+      let q = -Infinity;
+      for (let i = 0; i < W.m; i++)
+        if (W.frm[i] === src && W.kind[i] === a.kind && (a.kind === 0 || W.mkt[i] === a.mkt))
+          q = Math.max(q, W.lg[i] + Vh[W.to[i]]);
+      return Math.exp(q - Vh[src]);
+    });
+    const best = Math.max(...qs), best0 = Math.max(...q0);
+    const ms = performance.now() - t0;
+    $("cap").innerHTML = `<div class="stat"><span class="k">V<sub>E</sub>: dollars at the end per dollar staked</span><b>${vE.toFixed(6)}</b></div>` +
+      `<div class="stat"><span class="k">${qs.length + 1} solves, ${keep.length.toLocaleString()} arcs each</span><span>${ms.toFixed(0)} ms</span></div>`;
+    $("ctbl").querySelector("tbody").innerHTML = acts.map((a, k) => { const l = label(a);
+      return `<tr><td>${KINDS[a.kind]}</td><td>${l.ticker}</td><td class="num">${(1 - q0[k] / best0).toFixed(6)}</td>` +
+        `<td class="num">${qs[k].toFixed(6)}</td>` +
+        `<td class="num">${(1 - qs[k] / best).toFixed(6)}</td></tr>`; }).join("");
+  } catch (e) { $("err").textContent = String(e && e.stack || e); }
+}
+
+$("win").onchange = (e) => load(+e.target.value);
+$("maker").onchange = recompute;
+$("layer").oninput = () => { chart(); table(); };
+$("solve").onclick = solveCapacitated;
+await load(0);
+try {
+  const createSolver = (await import("./index.mjs")).default;
+  solver = await createSolver();
+  if (!solver.solveArrays) throw new Error("this gmaxflow build has no solveArrays");
+  $("solve").disabled = false;
+} catch (e) { $("err").textContent = "WebAssembly solver unavailable: " + e; }
+</script>
+</body>
+</html>

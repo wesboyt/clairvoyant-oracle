@@ -1,0 +1,14 @@
+[
+ {
+  "file": "metals_1415",
+  "label": "Gold + silver, 14:13:30-14:16:30 UTC, 1 s (the 14:15 contracts settle)"
+ },
+ {
+  "file": "cross_open",
+  "label": "Indices, rates, metals, energy, 14:20-14:50 UTC, 5 s (the stock open)"
+ },
+ {
+  "file": "energy_15",
+  "label": "Oil + natural gas, 15:00-15:20 UTC, 5 s"
+ }
+]

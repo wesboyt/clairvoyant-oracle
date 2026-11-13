@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install ./third_party/generalized-maxflow
+      - name: Secret scan
+        run: python tools/scan_keys.py
+      - name: Oracle tests (DP = generalized max flow on every forced first move)
+        run: python -m pytest -q tests
+      - name: Build the bundled lattice and its regret report
+        run: |
+          python -m oracle build --start 2026-11-12T14:00:00Z --end 2026-11-12T14:20:00Z --step 1 --out tape.npz
+          python -m oracle regret --tape tape.npz

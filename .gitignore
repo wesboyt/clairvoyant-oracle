@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.npz
+.pytest_cache/
+/site/
+/build-wasm/
+docs/gmaxflow.js
+docs/gmaxflow.wasm
+docs/index.mjs
+tacking/results/tack/
+tacking/results/runs/
+# never commit credentials
+*.pem
+*creds*.json
+kalshi.json
+cme.json
+.env
