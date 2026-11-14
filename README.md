@@ -66,7 +66,8 @@ on-policy updates drown out in any model that shares parameters across decisions
 own, causal share of the update is proportional to how often it is visited, while the share pushed onto it through
 shared parameters is not. It shows that the filter is a statistical test that partitions every batch (novel
 candidates included as pivots, known ones excluded from the gradient and recycled as lock rows), that this restores
-the causal share, that a
+the causal share, that simply removing the excluded samples biases the update toward optimistic strategies (it
+subtracts the known regions' gradient and their restoring force), that a
 KL lock on the known regions caps the non-causal movement at the segment's gain over β, and that this lowers the
 reachable ε-Nash floor. Everything is measured exactly on Kuhn and Leduc poker and a one-player ladder, with
 tabular, hashed and token-shared policies (`filtering/`).
@@ -86,7 +87,7 @@ python -m oracle node   --tape cross.npz --at 2026-11-12T14:29:00Z --stake 100 -
 python tools/make_demo.py                              # rebuild docs/data from the bundled data
 python tacking/experiments/e5_tack.py --quick          # the whitepaper's tacking experiments at T/10
 python filtering/run.py --seeds 6 && python filtering/figures.py   # FILTER_PAPER.md's tables and figures
-python filtering/regions.py && python filtering/inclusion.py && python filtering/causal.py   # sections 2-4
+python filtering/regions.py && python filtering/inclusion.py && python filtering/bias.py && python filtering/causal.py   # sections 2-4
 ```
 
 `node` prints one decision node's actions with $`\rho`$ over the whole window, $`\rho`$ for the horizon sub-game

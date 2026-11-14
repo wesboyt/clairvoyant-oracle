@@ -31,13 +31,19 @@ We show why this happens and what fixes it. Each step below is a proof, followed
    removed rather than diluted. The bar's misclassification is confined to a DKW band of width
    $`\sqrt{\ln(2/\delta)/2m}`$. Measured in Leduc: known decisions' share of gradient rows falls from 76 % to 8 %;
    novel decisions are included at 3.9× their on-policy rate.
-4. **What shared parameters push onto other decisions is not causal** (Theorem 2 and Proposition 4). A label is an interventional value, so a step is
+4. **Removing the excluded samples biases the update toward optimism, so they must be locked** (Theorem R, Lemma T,
+   Proposition O). Dropping known samples from the batch subtracts the known regions' gradient from the policy
+   gradient. The batch then sees only the tail (its mean disagreement is 2.2–2.9× the population's), and the
+   known regions lose the restoring force their own gradients supplied. The resulting strategies book value against
+   the opponent of the moment that is not equilibrium progress: 1.1–7× more per unit of progress than when the
+   excluded samples are locked. The lock is that restoring force, returned as KL rows.
+5. **What shared parameters push onto other decisions is not causal** (Theorem 2 and Proposition 4). A label is an interventional value, so a step is
    justified only at the decisions it intervened on. Everything else it moves is moved through shared parameters,
    in a direction uncorrelated with what those decisions need. Measured: 18–42 % of each step's movement lands on
    known decisions never intervened on, with correlation between −0.54 and +0.03 to their own improvement.
-5. **The lock caps the non-causal movement** (Theorem 3). A KL lock to a periodically refreshed teacher bounds the
+6. **The lock caps the non-causal movement** (Theorem 3). A KL lock to a periodically refreshed teacher bounds the
    known region's drift by the segment's gain over $`\beta`$. Measured: 2.5–20× less drift at the best β in every coupling class.
-6. **A tighter Nash bound** (Theorem 4). Exploitability is Lipschitz in the policy's movement, so the lock caps how
+7. **A tighter Nash bound** (Theorem 4). Exploitability is Lipschitz in the policy's movement, so the lock caps how
    much exploitability the non-causal movement can create. The reachable ε-Nash floor drops.
    Measured: Kuhn last iterate 0.159 → 0.0003 (tabular, $`\beta=8`$); Leduc 0.558 → 0.375 (tabular) and
    3.44 → 3.06 (token-shared parameters).
@@ -235,6 +241,80 @@ more candidates per pivot.
 **Measured: the leaves.** The filter raises the leaves' share of pivots in Leduc from 20–24 % (on-policy) to
 24–31 %, though the leaves are only 9–15 % of samples.
 
+### 3.3 Removing the excluded samples biases the update toward optimism; locking them removes the bias
+
+Excluding a sample from the policy-gradient batch is not neutral. It changes what the update estimates. This section
+shows the change exactly, why it makes strategies optimistic, and why locking the excluded samples, rather than
+dropping them, is necessary.
+
+**Theorem R (removal bias).** Write $`g_{\text{on}}=\mathbb{E}_{k\sim p}[\Phi_k^\top c_k]`$ for the on-policy update
+direction (an unbiased policy-gradient estimate, up to scale), and $`g_N`$, $`g_K`$ for its conditional means over
+novel and known decisions. Then $`g_{\text{on}}=\mu_Ng_N+(1-\mu_N)g_K`$. So the update of a batch from which the known
+samples are simply removed is
+```math
+g_{\text{removed}} \;=\; g_N \;=\; \frac{1}{\mu_N}\Big(g_{\text{on}}-(1-\mu_N)\,g_K\Big).
+```
+Removal is not a rescaling of the policy gradient. It **subtracts the known regions' gradient**. An unbiased filtered
+estimate would have to put that term back (or importance-weight the pivots by $`\mu_N`$ and keep the known rows).
+
+*Proof:* the law of total expectation over the partition $`\{d>b\},\{d\le b\}`$, with Theorem 1′. ∎
+
+**What removal deletes is a restoring force, not a signal.** By Lemma 3, a known decision's own gradient is small
+*where it stands*: $`\|F_k^{1/2}A_k\|\le\sqrt{2\,\mathrm{span}_k\,b}`$. Its role in on-policy learning is different.
+When spill moves a known decision off its optimum by $`\delta z_k`$, its own advantage turns against the move,
+$`A_k\approx-H_k\,\delta z_k`$ with $`H_k\succeq0`$ the local curvature of its value. In the on-policy update this
+enters as a **restoring term** $`-p_k\,\Phi_k^\top F_kH_k\,\delta z_k`$.
+- **Removed**, the term is gone. The known region has no restoring force, and spill moves it without resistance:
+  Theorem 2's drift $`\propto\eta M\kappa_{KP}`$.
+- **Locked**, the excluded sample returns as a KL row with gradient
+  $`\beta\rho_K(k)\,\Phi_k^\top(\pi_T-\pi_\theta)\approx-\beta\rho_K(k)\,\Phi_k^\top F_k\,\delta z_k`$: a restoring
+  force of stiffness $`\beta\rho_K(k)F_k`$ in place of $`p_kF_kH_k`$.
+
+The lock is the excluded samples' counterweight, put back explicitly. Theorem 3 is the statement that this spring
+holds: drift at most $`\bar G/\beta`$.
+
+**Lemma T (truncation optimism).** The included batch is the tail of the population:
+$`\mathbb{E}_q[d]=\mathbb{E}_p[d\mid d>b]\ge\mathbb{E}_p[d]`$. On closed doors its labels are the oracle's,
+$`Q^*\ge Q^\pi`$. So the batch overstates how much a typical move is worth. Its estimate of the attainable gain is
+the conditional mean above the bar, not the mean.
+
+**Proposition O (optimistic strategies).** Ascending $`g_{\text{removed}}`$ in a shared-parameter policy moves every
+decision in the direction the tail favours (Theorem 2), with nothing pulling the known regions back (Theorem R). In a
+two-player game the resulting strategy is tuned to the selected tail against the opponent of the moment. It books
+value against that opponent that is not progress toward equilibrium, and its exploitability grows by the exposure
+term of Theorem 4, which removal leaves unbounded and the lock caps.
+
+**Measured: how optimistic the removed batch is, and what the lock does about it** (`filtering/bias.py`, 4 seeds ×
+2,000 updates; "booked gain" = the realised own-step value gains against the opponent of the moment, summed over the
+run; "booked per unit of progress" = booked gain ÷ the NashConv reduction it bought):
+
+| | label lift: on-policy / removed / locked | booked gain | NashConv (start: Kuhn 0.917, Leduc 4.747) | booked gain per unit of progress |
+|---|---|---|---|---|
+| Kuhn, tabular | 0.99 / 2.46 / 2.49 | 14.6 / 29.5 / 15.6 | 0.255 / 0.135 / 0.102 | 22.1 / 37.8 / 19.2 |
+| Kuhn, hashed | 0.99 / 2.57 / 2.16 | 1.1 / 12.0 / 1.7 | 0.334 / 0.095 / 0.071 | 1.8 / 14.6 / 2.0 |
+| Kuhn, tokens | 0.99 / 2.60 / 2.37 | 4.0 / 123.0 / 89.8 | 0.750 / 0.239 / 0.194 | 24.2 / 181.6 / 124.4 |
+| Leduc, tabular | 1.00 / 2.64 / 2.44 | 9.0 / 6.6 / 5.7 | 1.767 / 0.620 / 0.728 | 3.0 / 1.6 / 1.4 |
+| Leduc, hashed | 1.00 / 2.85 / 2.67 | 18.8 / 14.7 / 7.3 | 4.332 / 1.353 / 1.689 | 45.2 / 4.3 / 2.4 |
+| Leduc, tokens | 1.00 / 2.90 / 2.80 | 31.0 / 425.9 / 196.3 | 5.742 / 3.535 / 3.024 | no progress / 351.3 / 113.9 |
+
+(Each column lists on-policy / removed / locked. "Booked gain per unit of progress" is the mean booked gain divided
+by the mean NashConv reduction.)
+
+- **The removed batch is optimistic in what it sees.** In every filtered arm its mean disagreement is 2.2–2.9× the
+  population's (Lemma T). On-policy batches sit at 1.0.
+- **Removal produces optimistic strategies.** Without the lock, the update books 1.1–7× more value per unit of
+  equilibrium progress than with it, in every coupling class: Kuhn hashed 14.6 vs 2.0, Leduc hashed 4.3 vs 2.4,
+  Leduc tokens 351 vs 114. Those gains are made against the opponent of the moment by moves the tail favoured, and
+  they do not survive the opponent's reply (Proposition O).
+- **Locking gives that back for equilibrium progress.** At these 2,000 updates the locked arm ends less exploitable
+  in Kuhn (every class) and in Leduc with token sharing (3.54 → 3.02). With tabular and hashed policies in Leduc it
+  ends higher (0.62 → 0.73, 1.35 → 1.69). §6's longer 3,000-update runs favour the lock for Leduc tabular
+  (0.558 → 0.375) and leave hashed within noise. The lock's guarantee is the bound of Theorem 4, not a faster
+  descent at every horizon.
+- With tabular policies nothing spills. There, the removed arm's predicted and booked gains coincide exactly (29.52),
+  which checks the accounting. The locked arm's booked gain is lower than predicted because the lock moves the
+  excluded decisions on purpose (back toward the teacher), which is the restoring force at work, not hidden bias.
+
 ---
 
 ## 4. Causation: the movement nobody evaluated
@@ -407,6 +487,7 @@ implies: its benefit is the exposure term, which only exists against an opponent
 | the edge decomposes exactly over decisions, and the leaves hold most of it | PROVED (Lemma 1) | Leduc: leaves 15 % of samples, 64 % of the edge; 73 % after on-policy learning |
 | a step can only earn its own decision's regret; known decisions have little to earn | PROVED (Lemmas 2–3) | filtering every ladder decision is 2.1–2.7× worse |
 | on-policy updates drown rare novel decisions in shared-parameter models | PROVED (Theorem 1) | known decisions are 76–87 % of on-policy gradient rows |
+| removing excluded samples subtracts the known gradient and makes strategies optimistic; locking them restores the counterweight | PROVED (Theorem R, Lemma T); Prop. O | batch label lift 2.2–2.9×; removal books 1.1–7× more gain per unit of equilibrium progress than locking |
 | the filter partitions each batch: novel included, known excluded and recycled as lock rows | PROVED (Theorem 1′); bar error within the DKW band (Prop. 1″) | Leduc: known gradient rows 76 % → 8 %, novel inclusion 3.9×, bar inside the DKW radius on 99.8 % of updates; leaves' pivot share 20–24 % → 24–31 % |
 | movement outside the pivots is non-causal | PROVED (Theorem 2, Prop. 4) | 18–42 % of movement on known decisions, correlation −0.54 to +0.03 |
 | the lock caps that movement by gain / β | PROVED under the descent condition (Theorem 3) | 2.5–20× less drift; failure past the descent limit as predicted |
@@ -430,6 +511,7 @@ python -m pytest -q tests/test_filter.py      # Lemma 1, Lemma 3, the spill law,
 python filtering/run.py --seeds 6             # sections 5-6 (about an hour; --quick for T/10)
 python filtering/regions.py                   # section 2
 python filtering/inclusion.py                 # section 3.2
+python filtering/bias.py                      # section 3.3
 python filtering/causal.py                    # section 4
 python filtering/figures.py                   # filtering/results/fig_*.svg
 ```
