@@ -64,7 +64,9 @@ Game space splits into known regions, where the policy agrees with a best-respon
 does not, and the two are not known to correlate. The edge sits in rare novel decisions near the leaves, which
 on-policy updates drown out in any model that shares parameters across decisions. The paper proves that a decision's
 own, causal share of the update is proportional to how often it is visited, while the share pushed onto it through
-shared parameters is not. It shows that filtering pivots by the oracle's disagreement restores that share, that a
+shared parameters is not. It shows that the filter is a statistical test that partitions every batch (novel
+candidates included as pivots, known ones excluded from the gradient and recycled as lock rows), that this restores
+the causal share, that a
 KL lock on the known regions caps the non-causal movement at the segment's gain over β, and that this lowers the
 reachable ε-Nash floor. Everything is measured exactly on Kuhn and Leduc poker and a one-player ladder, with
 tabular, hashed and token-shared policies (`filtering/`).
@@ -84,7 +86,7 @@ python -m oracle node   --tape cross.npz --at 2026-11-12T14:29:00Z --stake 100 -
 python tools/make_demo.py                              # rebuild docs/data from the bundled data
 python tacking/experiments/e5_tack.py --quick          # the whitepaper's tacking experiments at T/10
 python filtering/run.py --seeds 6 && python filtering/figures.py   # FILTER_PAPER.md's tables and figures
-python filtering/regions.py && python filtering/causal.py          # FILTER_PAPER.md sections 2 and 4
+python filtering/regions.py && python filtering/inclusion.py && python filtering/causal.py   # sections 2-4
 ```
 
 `node` prints one decision node's actions with $`\rho`$ over the whole window, $`\rho`$ for the horizon sub-game

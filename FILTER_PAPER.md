@@ -23,14 +23,21 @@ We show why this happens and what fixes it. Each step below is a proof, followed
    decision's own regret (Lemma 2), and a known decision has little left to earn (Lemma 3).
 2. **On-policy updates drown the novel regions** (Theorem 1). A decision's own, causal share of the update is
    proportional to its occupancy. In a shared-parameter policy the share pushed onto it by other decisions is not,
-   so as occupancy falls the causal share vanishes.
-3. **That push is not causal** (Theorem 2 and Proposition 4). A label is an interventional value, so a step is
+   so as occupancy falls the causal share vanishes. The known regions hold about $`1-f`$ of every on-policy batch.
+3. **The filter is a statistical test that partitions every batch** (Theorem 1′, Proposition 1″). Each on-policy
+   candidate is either included as a pivot, because its disagreement clears the sampled quantile bar, or excluded
+   from the gradient. Excluded known candidates become the lock's rows. The pivots are then distributed as occupancy
+   conditioned on being novel, amplifying each novel decision by $`1/f`$, and the known regions' gradient term is
+   removed rather than diluted. The bar's misclassification is confined to a DKW band of width
+   $`\sqrt{\ln(2/\delta)/2m}`$. Measured in Leduc: known decisions' share of gradient rows falls from 76 % to 8 %;
+   novel decisions are included at 3.9× their on-policy rate.
+4. **What shared parameters push onto other decisions is not causal** (Theorem 2 and Proposition 4). A label is an interventional value, so a step is
    justified only at the decisions it intervened on. Everything else it moves is moved through shared parameters,
    in a direction uncorrelated with what those decisions need. Measured: 18–42 % of each step's movement lands on
    known decisions never intervened on, with correlation between −0.54 and +0.03 to their own improvement.
-4. **The lock caps the non-causal movement** (Theorem 3). A KL lock to a periodically refreshed teacher bounds the
+5. **The lock caps the non-causal movement** (Theorem 3). A KL lock to a periodically refreshed teacher bounds the
    known region's drift by the segment's gain over $`\beta`$. Measured: 2.5–20× less drift at the best β in every coupling class.
-5. **A tighter Nash bound** (Theorem 4). Exploitability is Lipschitz in the policy's movement, so the lock caps how
+6. **A tighter Nash bound** (Theorem 4). Exploitability is Lipschitz in the policy's movement, so the lock caps how
    much exploitability the non-causal movement can create. The reachable ε-Nash floor drops.
    Measured: Kuhn last iterate 0.159 → 0.0003 (tabular, $`\beta=8`$); Leduc 0.558 → 0.375 (tabular) and
    3.44 → 3.06 (token-shared parameters).
@@ -61,10 +68,13 @@ samples $`k`$. All values are normalised by $`R(k)`$.
 bar is statistical: the $`(1-f)`$ quantile of $`d`$ over the decisions sampled on-policy.
 
 **The method.**
-1. Sample candidate decisions on-policy.
-2. Take as **pivots** the novel candidates with the highest disagreement. Label them with the interventional values,
-   switched to the oracle's where it finds an action the policy has nearly closed.
-3. Put the known candidates in a **lock set**.
+1. Sample candidate decisions on-policy: $`n_u`$ from the unfiltered decisions and $`m=Kn_f`$ from the filtered ones.
+2. **Include or exclude** each filtered candidate by a statistical test. Compute $`\hat b`$, the $`(1-f)`$ quantile of
+   the $`m`$ sampled disagreements. The first $`n_f`$ candidates above it are **pivots**: they enter the
+   policy-gradient batch, labelled with their interventional values, switched to the oracle's where it finds an
+   action the policy has nearly closed.
+3. Every other filtered candidate is excluded from the policy-gradient batch. Those at or below $`\hat b`$ (known)
+   form the **lock set**.
 4. Ascend the pivots' policy-gradient surrogate minus
    $`\beta\cdot\text{mean}_{k\in\text{lock}}\mathrm{KL}(\pi_T(\cdot\mid k)\,\|\,\pi_\theta(\cdot\mid k))`$.
 5. Every $`M`$ updates, refresh the teacher $`T\leftarrow\theta`$.
@@ -132,7 +142,9 @@ rest is solved; the absolute column is the one that matters.)
 
 ---
 
-## 3. Why the leaves are drowned
+## 3. Why the leaves are drowned, and how inclusion and exclusion fix it
+
+### 3.1 On-policy updates drown rare novel decisions
 
 **Theorem 1 (drowning).** Under on-policy sampling with $`n`$ samples per update and step $`\eta`$, the expected
 logit change at a decision $`j`$ is
@@ -143,18 +155,85 @@ logit change at a decision $`j`$ is
 where $`c_k`$ is the label gradient at $`k`$.
 - The first term is $`j`$'s own, **causal** update, evaluated at $`j`$. It is proportional to $`p_j`$.
 - The second term is pushed onto $`j`$ through shared parameters by every other decision. It is bounded by
-  $`\|K_{j,-j}\|\,(1-p_j)\max_k\|c_k\|`$ and does not shrink with $`p_j`$.
+  $`\|K_{j,-j}\|(1-p_j)\max_k\|c_k\|`$ and does not shrink with $`p_j`$. Most of it comes from the known regions,
+  which hold most of the samples: a fraction $`1-\mu_N`$ of every batch, where $`\mu_N`$ is the novel region's
+  occupancy mass.
 
 So for a novel leaf with $`p_j\to0`$ (0.5 % in full-scale poker) the ratio of causal to non-causal movement goes to
 zero unless $`K_{j,-j}=0`$, i.e. unless nothing is shared. *Proof:* linearity of $`z=\Phi e`$ and of the expectation
 over samples. ∎
 
-**Corollary (the filter restores the causal share).** Selecting a fixed number $`n_f`$ of pivots from the novel
-region replaces $`p_j`$ by a selection probability of order $`n_f/(K n_f)`$ within the candidates, independent of
-how rarely the region is visited.
+### 3.2 The filter is a statistical test that partitions every batch
 
-**Measured.** The filter raises the leaves' share of pivots in Leduc from 20–24 % (on-policy) to 24–31 %, though
-the leaves are only 9–15 % of samples.
+Each update draws $`m=Kn_f`$ candidates on-policy from the filtered decisions and splits them:
+
+- **included**: a candidate whose disagreement exceeds $`\hat b`$, the $`(1-f)`$ quantile of the $`m`$ sampled
+  scores, becomes a pivot (the first $`n_f`$ such, in sampling order) and contributes a policy-gradient row;
+- **excluded**: every other candidate contributes **no** policy-gradient row. Those at or below the bar become lock
+  rows.
+
+A sample is never down-weighted: it is either in the gradient or out of it. Write $`F`$ for the occupancy-weighted
+distribution function of $`d`$ over the filtered decisions, and $`b=F^{-1}(1-f)`$ for the population bar.
+
+**Theorem 1′ (selection law).** If the test is exact ($`\hat b=b`$), the pivots are distributed as occupancy
+*conditioned on being novel*, and the lock rows as occupancy conditioned on being known:
+```math
+q(k)\;=\;\frac{p_k\,\mathbb{1}[d(k)>b]}{\mu_N},\qquad
+\rho_K(k)\;=\;\frac{p_k\,\mathbb{1}[d(k)\le b]}{1-\mu_N},\qquad \mu_N=1-F(b)=f .
+```
+Hence the expected update of the filtered batch is
+```math
+\mathbb{E}\,\delta z_j \;=\; \eta n_f\Big[\;\frac{p_j}{\mu_N}\,K_{jj}\,c_j \;+\; \sum_{k\ \text{novel},\,k\ne j}\frac{p_k}{\mu_N}\,K_{jk}\,c_k\;\Big]
+\;+\;\text{lock term}.
+```
+Compared with Theorem 1:
+- every novel decision's causal share is **amplified by $`1/\mu_N=1/f`$**;
+- the known regions' term is **removed exactly**, not diluted;
+- the known samples that were removed are not wasted: they are the lock's rows, drawn from exactly the law
+  $`\rho_K`$ that Theorem 3 needs.
+
+What remains non-causal is the spill among novel decisions, and the lock term, which only pulls the known region back
+toward its teacher. *Proof:* sampling $`\propto p`$ and keeping the draws with $`d>b`$ (in order) is rejection
+sampling from $`p`$ restricted to $`\{d>b\}`$; the rest is linearity. ∎
+
+**Proposition 1″ (statistical inclusion).** The bar is estimated from $`m`$ draws. By the Dvoretzky–Kiefer–Wolfowitz
+inequality, with probability at least $`1-\delta`$,
+```math
+\big|F(\hat b)-(1-f)\big|\;\le\;\varepsilon_m=\sqrt{\ln(2/\delta)/(2m)} .
+```
+On that event:
+- every decision with $`F(d)>1-f+\varepsilon_m`$ clears the bar, and every decision with $`F(d)<1-f-\varepsilon_m`$
+  is excluded;
+- misclassification is confined to a band of occupancy mass $`2\varepsilon_m`$ around the bar;
+- the share of included pivots that are actually known is at most about $`\varepsilon_m/f`$.
+
+With discrete scores, mass tied at the bar can also enter through the fill rule; the leak is bounded by that mass.
+More candidates per slot (a larger $`K`$) narrow the band as $`1/\sqrt{Kn_f}`$. *Proof:* DKW for the empirical
+distribution function of $`m`$ i.i.d. draws, evaluated at the empirical quantile. ∎
+
+**Measured: what the test includes and excludes** (`filtering/inclusion.py`, tabular policies, 3 seeds × 1,500
+updates; "novel" and "known" judged at the population bar $`b`$):
+
+| | candidates per update m | included pivots that are novel | gradient rows from known decisions | novel inclusion rate vs on-policy | lock rows that are known | sampled bar within the DKW radius (δ = 0.05) |
+|---|---|---|---|---|---|---|
+| Kuhn, on-policy | 3 | 13 % | 87 % | 1.0× | — | — |
+| Kuhn, filter + lock | 15 | 58 % | 42 % | **4.0×** | 97 % | 99.8 % (radius 0.35; mean offset 0.11) |
+| Leduc, on-policy | 16 | 24 % | 76 % | 1.0× | — | — |
+| Leduc, filter + lock | 80 | **92 %** | **8 %** | **3.9×** | 98 % | 99.8 % (radius 0.15; mean offset 0.04) |
+
+In Leduc ($`m=80`$) the test behaves as Theorem 1′ and Proposition 1″ say:
+- on-policy sampling feeds known decisions into about three quarters of the gradient rows ($`\approx1-f`$); the
+  filter cuts that to under a tenth;
+- novel decisions are included at close to $`1/f=4`$ times their on-policy rate;
+- the sampled bar sits inside the DKW radius on nearly every update.
+
+Kuhn ($`m=15`$, many tied scores) is the small-sample regime. The radius is wide, and ties at the bar enter through
+the fill rule, so 42 % of its pivots are still known. Even so, novel decisions are included at 4.0× their on-policy
+rate, and the share of novel pivots rises 4.5× (13 % → 58 %). Proposition 1″ says how to close the rest of the gap:
+more candidates per pivot.
+
+**Measured: the leaves.** The filter raises the leaves' share of pivots in Leduc from 20–24 % (on-policy) to
+24–31 %, though the leaves are only 9–15 % of samples.
 
 ---
 
@@ -327,7 +406,8 @@ implies: its benefit is the exposure term, which only exists against an opponent
 |---|---|---|
 | the edge decomposes exactly over decisions, and the leaves hold most of it | PROVED (Lemma 1) | Leduc: leaves 15 % of samples, 64 % of the edge; 73 % after on-policy learning |
 | a step can only earn its own decision's regret; known decisions have little to earn | PROVED (Lemmas 2–3) | filtering every ladder decision is 2.1–2.7× worse |
-| on-policy updates drown rare novel decisions in shared-parameter models | PROVED (Theorem 1) | filter lifts leaves' pivot share from 20–24 % to 24–31 % |
+| on-policy updates drown rare novel decisions in shared-parameter models | PROVED (Theorem 1) | known decisions are 76–87 % of on-policy gradient rows |
+| the filter partitions each batch: novel included, known excluded and recycled as lock rows | PROVED (Theorem 1′); bar error within the DKW band (Prop. 1″) | Leduc: known gradient rows 76 % → 8 %, novel inclusion 3.9×, bar inside the DKW radius on 99.8 % of updates; leaves' pivot share 20–24 % → 24–31 % |
 | movement outside the pivots is non-causal | PROVED (Theorem 2, Prop. 4) | 18–42 % of movement on known decisions, correlation −0.54 to +0.03 |
 | the lock caps that movement by gain / β | PROVED under the descent condition (Theorem 3) | 2.5–20× less drift; failure past the descent limit as predicted |
 | locking known regions lowers the ε-Nash floor | PROVED as an inequality (Theorem 4); floor $`O(1/\beta)`$ under a progress condition | Kuhn 0.159 → 0.0003; Leduc 0.558 → 0.375 and 3.44 → 3.06; Leduc hashed within noise |
@@ -349,6 +429,7 @@ implies: its benefit is the exposure term, which only exists against an opponent
 python -m pytest -q tests/test_filter.py      # Lemma 1, Lemma 3, the spill law, exact accounting, the drift cap
 python filtering/run.py --seeds 6             # sections 5-6 (about an hour; --quick for T/10)
 python filtering/regions.py                   # section 2
+python filtering/inclusion.py                 # section 3.2
 python filtering/causal.py                    # section 4
 python filtering/figures.py                   # filtering/results/fig_*.svg
 ```
