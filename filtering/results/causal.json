@@ -1,0 +1,86 @@
+{
+ "Kuhn/tabular": {
+  "pivots": {
+   "corr": 1.0000000000000082,
+   "movement_share": 1.0
+  },
+  "known": {
+   "corr": 0.0,
+   "movement_share": 0.0
+  },
+  "novel": {
+   "corr": 0.0,
+   "movement_share": 0.0
+  }
+ },
+ "Kuhn/hashed": {
+  "pivots": {
+   "corr": 0.9170775161164563,
+   "movement_share": 0.6030941990136086
+  },
+  "known": {
+   "corr": -0.5403930458336139,
+   "movement_share": 0.38021757073489254
+  },
+  "novel": {
+   "corr": -0.04396249275460577,
+   "movement_share": 0.01668823025149887
+  }
+ },
+ "Kuhn/tokens": {
+  "pivots": {
+   "corr": 0.9772844560833497,
+   "movement_share": 0.6893332569386307
+  },
+  "known": {
+   "corr": 0.021888807812025863,
+   "movement_share": 0.2990621822387839
+  },
+  "novel": {
+   "corr": -0.17036597163968722,
+   "movement_share": 0.011604560822585588
+  }
+ },
+ "Leduc/tabular": {
+  "pivots": {
+   "corr": 0.9076580714170119,
+   "movement_share": 1.0
+  },
+  "known": {
+   "corr": 0.0,
+   "movement_share": 0.0
+  },
+  "novel": {
+   "corr": 0.0,
+   "movement_share": 0.0
+  }
+ },
+ "Leduc/hashed": {
+  "pivots": {
+   "corr": 0.5831209175008161,
+   "movement_share": 0.7006651639556285
+  },
+  "known": {
+   "corr": -0.17638611874960533,
+   "movement_share": 0.18106464357124014
+  },
+  "novel": {
+   "corr": -0.19614733788618824,
+   "movement_share": 0.11827019247313149
+  }
+ },
+ "Leduc/tokens": {
+  "pivots": {
+   "corr": 0.3403410641183264,
+   "movement_share": 0.45657289062334655
+  },
+  "known": {
+   "corr": 0.02680884941068169,
+   "movement_share": 0.4224434751119004
+  },
+  "novel": {
+   "corr": 0.08340179253191637,
+   "movement_share": 0.12098363426475307
+  }
+ }
+}

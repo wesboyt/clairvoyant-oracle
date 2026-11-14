@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" font-family="sans-serif" font-size="11">
+<rect width="100%" height="100%" fill="white"/>
+<text x="70" y="18" font-size="13" font-weight="bold">leduc: drift of the agreeing region from the teacher</text>
+<rect x="70" y="34" width="400" height="316" fill="none" stroke="#444"/>
+<line x1="70.0" y1="34" x2="70.0" y2="350" stroke="#ddd"/>
+<text x="70.0" y="364" text-anchor="middle">1e-1</text>
+<line x1="280.2" y1="34" x2="280.2" y2="350" stroke="#ddd"/>
+<text x="280.2" y="364" text-anchor="middle">1e0</text>
+<line x1="70" y1="283.5" x2="470" y2="283.5" stroke="#ddd"/>
+<text x="66" y="287.5" text-anchor="end">1e-2</text>
+<line x1="70" y1="138.1" x2="470" y2="138.1" stroke="#ddd"/>
+<text x="66" y="142.1" text-anchor="end">1e-1</text>
+<text x="270" y="388" text-anchor="middle">lock weight beta (0.1 = no lock)</text>
+<text x="14" y="192" transform="rotate(-90 14 192)" text-anchor="middle">KL drift per segment</text>
+<polyline fill="none" stroke="#1f77b4" stroke-width="1.5" points="70.0,165.3 216.9,191.0 343.5,243.4 470.0,290.0"/>
+<rect x="478" y="37" width="10" height="10" fill="#1f77b4"/>
+<text x="492" y="46">hashed</text>
+<polyline fill="none" stroke="#d62728" stroke-width="1.5" points="70.0,292.0 216.9,309.1 343.5,330.8 470.0,350.0"/>
+<rect x="478" y="52" width="10" height="10" fill="#d62728"/>
+<text x="492" y="61">tabular</text>
+<polyline fill="none" stroke="#2ca02c" stroke-width="1.5" points="70.0,34.0 216.9,77.3 343.5,107.8 470.0,72.2"/>
+<rect x="478" y="67" width="10" height="10" fill="#2ca02c"/>
+<text x="492" y="76">tokens</text>
+</svg>

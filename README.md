@@ -57,6 +57,18 @@ gradient explores only on a bounded amount of probability mass. It proves first-
 single-agent case, measures them on exactly solvable games, and applies the oracle to three hours of Kalshi order
 books.
 
+**[FILTER_PAPER.md](FILTER_PAPER.md): Novel and known regions: causal exploration and a tighter Nash bound for
+shared-parameter policies.**
+
+Game space splits into known regions, where the policy agrees with a best-response oracle, and novel ones, where it
+does not, and the two are not known to correlate. The edge sits in rare novel decisions near the leaves, which
+on-policy updates drown out in any model that shares parameters across decisions. The paper proves that a decision's
+own, causal share of the update is proportional to how often it is visited, while the share pushed onto it through
+shared parameters is not. It shows that filtering pivots by the oracle's disagreement restores that share, that a
+KL lock on the known regions caps the non-causal movement at the segment's gain over β, and that this lowers the
+reachable ε-Nash floor. Everything is measured exactly on Kuhn and Leduc poker and a one-player ladder, with
+tabular, hashed and token-shared policies (`filtering/`).
+
 ## Usage
 
 ```bash
@@ -71,6 +83,8 @@ python -m oracle build  --start 2026-11-12T14:20:00Z --end 2026-11-12T14:50:00Z 
 python -m oracle node   --tape cross.npz --at 2026-11-12T14:29:00Z --stake 100 --horizon 24
 python tools/make_demo.py                              # rebuild docs/data from the bundled data
 python tacking/experiments/e5_tack.py --quick          # the whitepaper's tacking experiments at T/10
+python filtering/run.py --seeds 6 && python filtering/figures.py   # FILTER_PAPER.md's tables and figures
+python filtering/regions.py && python filtering/causal.py          # FILTER_PAPER.md sections 2 and 4
 ```
 
 `node` prints one decision node's actions with $`\rho`$ over the whole window, $`\rho`$ for the horizon sub-game
@@ -103,6 +117,7 @@ oracle/regret.py       relative regret: backward pass (marginal), generalized ma
 oracle/__main__.py     command line: build, regret, node, demo
 docs/                  browser demo (index.html and exported windows in docs/data)
 tacking/               exact experiments for the whitepaper's section 4
+filtering/             the filter and lock on exact games, results and figures for FILTER_PAPER.md
 results/               regret report for the bundled data
 tests/                 exactness tests
 third_party/           generalized-maxflow (submodule)
